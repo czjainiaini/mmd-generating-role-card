@@ -26,6 +26,14 @@
 
 ## 安装
 
+### 让 Codex 安装
+
+把下面这句话发给 Codex：
+
+```text
+请安装 https://github.com/czjainiaini/mmd-generating-role-card 中的 generating-role-card Skill。
+```
+
 ### 下载 ZIP
 
 1. 从 GitHub 的 **Releases** 下载源码包并解压。
@@ -93,4 +101,3 @@ npm test
 本仓库原创扩展与修改采用 [MIT License](LICENSE)。MMD 名称、网站、官方资料及相关标识的原始权利归其各自权利人所有；MIT 条款不覆盖第三方另行保留的权利。
 
 本项目是社区维护工具，不代表 MMD 官方背书。
-
