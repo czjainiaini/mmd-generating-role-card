@@ -1,0 +1,6 @@
+<script>
+// 平台把舞台关了（比如按返回）。你自己调 stage.close() 不会发这个
+sdk.on('stage:close', function () {
+  sdk.debug.log('舞台被平台关了');
+});
+</script>

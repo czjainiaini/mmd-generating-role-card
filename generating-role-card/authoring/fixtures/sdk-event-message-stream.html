@@ -1,0 +1,7 @@
+<script>
+// 正在一个字一个字往外蹦。跟字读 msg.content（已攒原文）。别在这里查 DOM
+sdk.on('message:stream', function (msg) {
+  if (!msg || !msg.content) return;
+  sdk.debug.log('流式片段', msg.content);
+});
+</script>

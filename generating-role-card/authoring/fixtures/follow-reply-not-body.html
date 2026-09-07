@@ -1,0 +1,20 @@
+<script>
+// 跟字读 stream 的 msg.content，收尾读 done 的 msg.content。
+// 不要在 mount 里读 [data-chat="message-body"]：空 AI 气泡一挂上，
+// 那里写的是「消息生成中」，不是模型回的字。
+function isReplyText(s) {
+  s = String(s == null ? '' : s).replace(/^\s+|\s+$/g, '');
+  if (!s) return false;
+  if (s.indexOf('消息生成') === 0 || s === '……') return false;
+  return true;
+}
+sdk.on('message:stream', function (msg) {
+  if (!msg || msg.role !== 'ai') return;
+  if (!isReplyText(msg.content)) return;
+  sdk.debug.log('跟字', msg.content);
+});
+sdk.on('message:done', function (msg) {
+  if (!isReplyText(msg && msg.content)) return;
+  sdk.debug.log('说完了', msg.content);
+});
+</script>

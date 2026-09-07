@@ -1,0 +1,4 @@
+interface:
+  display_name: "MMD 角色卡与文字游戏"
+  short_description: "介绍功能、规划制作角色卡与文字游戏，检查漏项并按证据验收"
+  default_prompt: "使用 $generating-role-card 处理我的 MMD 角色卡任务；若尚未给出具体任务，先介绍功能、推荐基线、可选增强和平台限制，并把建议与需要我决定的事项明确分开。"

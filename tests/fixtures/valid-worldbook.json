@@ -1,0 +1,19 @@
+{
+  "entries": {
+    "0": {
+      "comment": "世界观",
+      "disable": false,
+      "constant": true,
+      "position": 4,
+      "role": 0,
+      "depth": 4,
+      "order": 9999,
+      "probability": "100.00",
+      "key": "[]",
+      "keysecondary": "[]",
+      "content": "<世界观>\n临江城以水路与药材贸易闻名。\n</世界观>",
+      "uid": 0
+    }
+  }
+}
+

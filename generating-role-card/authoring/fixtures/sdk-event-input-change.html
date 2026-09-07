@@ -1,0 +1,6 @@
+<script>
+// 输入框里的字变了。用来跟着草稿更新预览。别在这里再写回输入框
+sdk.on('input:change', function () {
+  sdk.debug.log('草稿', sdk.input.get());
+});
+</script>

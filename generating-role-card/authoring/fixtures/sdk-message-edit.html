@@ -1,0 +1,16 @@
+<script>
+// 改写一条已经发出去的消息。id 来自气泡上的 data-msg-id
+sdk.on('message:mount', function () {
+  const btn = document.querySelector('.rewrite-btn');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    const body = document.querySelector('[data-chat="message-body"]');
+    const card = body && body.closest('[data-chat="message"]');
+    const id = card && card.getAttribute('data-msg-id');
+    if (!id) return;
+    sdk.message.edit(id, '改过的正文').catch(function (err) {
+      sdk.debug.log('没改成', err.code);
+    });
+  });
+});
+</script>

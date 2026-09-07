@@ -1,0 +1,11 @@
+{
+  "name": "mmd-generating-role-card-skill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Validation harness for the MMD new-chat role-card Codex Skill",
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/check-package.mjs && node generating-role-card/authoring/scripts/inject-fixtures.mjs --check && node generating-role-card/scripts/validate.mjs tests/fixtures/valid-regex.json && node generating-role-card/scripts/validate-worldbook.mjs tests/fixtures/valid-worldbook.json"
+  }
+}
+

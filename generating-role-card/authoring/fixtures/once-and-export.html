@@ -1,0 +1,19 @@
+<script>
+const store = { count: 0 };
+
+class Counter {
+  constructor(state) {
+    this.state = state;
+  }
+  bump() {
+    this.state.count += 1;
+    return this.state.count;
+  }
+}
+
+const counter = new Counter(store);
+
+function tap() {
+  sdk.input.set('第 ' + counter.bump() + ' 次');
+}
+</script>

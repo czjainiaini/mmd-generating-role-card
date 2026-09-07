@@ -1,0 +1,7 @@
+<script>
+// 一条新消息刚出现，正文通常还是空的。空 AI 气泡的 body 是「消息生成中」。
+// 几乎用不到；要等说完请用 message:done
+sdk.on('message:new', function (msg) {
+  sdk.debug.log('新消息开始', msg && msg.id);
+});
+</script>

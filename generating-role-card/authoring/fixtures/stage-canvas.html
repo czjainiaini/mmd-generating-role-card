@@ -1,0 +1,15 @@
+<script>
+function openBoard() {
+  sdk.stage.open('content');
+  const el = sdk.stage.el();
+  if (!el || el.querySelector('canvas')) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = 320;
+  canvas.height = 240;
+  el.appendChild(canvas);
+}
+
+sdk.on('stage:close', function () {
+  sdk.debug.log('舞台被平台关了');
+});
+</script>

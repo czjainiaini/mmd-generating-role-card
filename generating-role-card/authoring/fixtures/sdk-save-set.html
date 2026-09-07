@@ -1,0 +1,8 @@
+<script>
+// 写入存档，换设备还在。一分钟最多 20 次，失败要 .catch
+function persistGame(game) {
+  sdk.save.set('game', game).catch(function (err) {
+    sdk.debug.log('存档没写成', err.code);
+  });
+}
+</script>

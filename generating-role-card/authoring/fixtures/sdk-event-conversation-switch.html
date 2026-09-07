@@ -1,0 +1,6 @@
+<script>
+// 用户换了一个会话。脚本不会重跑，属于上一场的计数要在这里清
+sdk.on('conversation:switch', function () {
+  sdk.debug.log('换会话了');
+});
+</script>

@@ -1,0 +1,8 @@
+<script>
+// 以用户身份直接发出去。点按钮的当帧里调才不会弹授权
+function sendNow() {
+  sdk.message.send('我准备好了').catch(function (err) {
+    sdk.debug.log('发送失败', err.code);
+  });
+}
+</script>

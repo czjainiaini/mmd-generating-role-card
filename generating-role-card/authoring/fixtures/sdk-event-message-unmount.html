@@ -1,0 +1,6 @@
+<script>
+// 气泡滚出屏幕被拆掉了。定时器、观察者在这里停掉
+sdk.on('message:unmount', function () {
+  sdk.debug.log('气泡没了');
+});
+</script>

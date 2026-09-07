@@ -1,0 +1,9 @@
+<script>
+sdk.on('message:mount', function () {
+  const btn = document.querySelector('.hello-btn');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    sdk.input.set('你好');
+  });
+});
+</script>

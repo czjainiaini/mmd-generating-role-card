@@ -1,0 +1,6 @@
+<script>
+// AI 说完了。读 msg.content，不要去读气泡 body（生成中那会儿是「消息生成中」）
+sdk.on('message:done', function (msg) {
+  sdk.debug.log('说完了', msg && msg.content);
+});
+</script>

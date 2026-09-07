@@ -1,0 +1,9 @@
+<!-- 外链按你写的顺序加载，同一个 URL 只加载一次；上一条没落地不会跑下一条。 -->
+<script src="https://cdn.example.com/tiny-engine.min.js"></script>
+<script>
+  sdk.on('message:mount', function () {
+    const box = document.querySelector('.engine-box');
+    if (!box || !window.TinyEngine) return;
+    TinyEngine.mount(box);
+  });
+</script>

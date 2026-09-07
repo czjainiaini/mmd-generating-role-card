@@ -1,0 +1,8 @@
+<script>
+// 删掉一条存档
+function clearGame() {
+  sdk.save.remove('game').catch(function (err) {
+    sdk.debug.log('没删成', err.code);
+  });
+}
+</script>

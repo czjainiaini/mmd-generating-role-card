@@ -1,0 +1,27 @@
+{
+  "note": "官方默认示例卡。它同时是回归夹具（test/authoring/example-card.test.ts 真跑它），所以改这里要跟着跑那条测试。字段形状照 role.get 的出参：role.* 是卡的基本信息，presentation.transforms 是你在创卡页「设置正则」里填的那些规则。",
+  "role": {
+    "name": "示例卡 · 小灯",
+    "statusbar": "{{hud}}",
+    "beginning": "你好，我是小灯。想试试的话，点下面那个按钮。"
+  },
+  "presentation": {
+    "transforms": [
+      {
+        "name": "hud",
+        "pattern": "{{hud}}",
+        "replacement": "<div class=\"demo-hud\">状态：<b class=\"demo-hp\">10</b></div><style>.demo-hud{padding:6px 10px;font-size:13px}.demo-hp{color:var(--chat-accent)}[data-chat=\"message\"][data-from=\"ai\"] [data-chat=\"message-body\"]{--chat-bubble-ai-bg:#123456}</style>"
+      },
+      {
+        "name": "script",
+        "pattern": "{{demo-script}}",
+        "replacement": "<script>\nconst demoState = { taps: 0 };\nsdk.on('message:mount', function () {\n  const btn = document.querySelector('.demo-tap');\n  if (!btn) return;\n  btn.addEventListener('click', onTap);\n});\nfunction onTap() {\n  demoState.taps += 1;\n  sdk.input.set('我点了 ' + demoState.taps + ' 次');\n  sdk.save.set('demo-taps', demoState.taps).catch(function (err) {\n    sdk.debug.log('存档没写成', err.code);\n  });\n}\n<\/script>"
+      }
+    ]
+  },
+  "howToTry": [
+    "把 hud 规则的替换内容改一个字，回聊天页看功能栏跟着变。",
+    "气泡 HTML 里写 <button class=\"demo-tap\">点我</button>，点它会写输入框并存档。",
+    "脚本只跑一次：每条气泡的活儿写在 sdk.on('message:mount') 里，不要写在顶层。"
+  ]
+}
