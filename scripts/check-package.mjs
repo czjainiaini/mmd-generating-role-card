@@ -30,6 +30,7 @@ async function exists(path) {
 async function walk(dir) {
   const out = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
+    if (entry.isDirectory() && entry.name === '.git') continue;
     const path = join(dir, entry.name);
     if (entry.isDirectory()) out.push(...await walk(path));
     else if (entry.isFile()) out.push(path);
@@ -70,7 +71,6 @@ const secretPatterns = [
 
 const files = await walk(repoRoot);
 for (const path of files) {
-  if (path.includes(`${join(repoRoot, '.git')}`)) continue;
   if (!textExtensions.has(extname(path).toLowerCase()) && !['LICENSE'].includes(relative(repoRoot, path))) continue;
   const text = await readFile(path, 'utf8');
   for (const [label, pattern] of secretPatterns) {
