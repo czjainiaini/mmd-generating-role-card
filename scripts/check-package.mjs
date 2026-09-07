@@ -14,6 +14,7 @@ const required = [
   'authoring/reference.md',
   'references/workflows.md',
   'references/stage-game-brief.md',
+  'references/frameworks-and-effects.md',
   'references/acceptance.md',
 ];
 

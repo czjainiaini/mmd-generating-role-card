@@ -44,6 +44,8 @@ $generating-role-card 继续未完成项
 
 用户要做基于 LLM 的完整小游戏主页面、多个标签页 / 模态框、全屏舞台或高端视觉界面时，必须读 [references/stage-game-brief.md](references/stage-game-brief.md)，按其中的功能基线、标签化状态协议、存档、发送模式、响应式、宿主布局保护和视觉验收实现。新复杂项目先从用户现有描述提取设计信息；视觉与布局仍有关键空白、且用户没有委托 AI 决定时，发送其中已预填的“美化与布局需求表”。信息够就直接做，不重复问；用户说“不确定”“你来定”或明确要求 AI 填写时，由 AI 补齐一套自洽方案并披露选择。界面结构必须随题材、核心循环、信息层级和设备重新设计，不能只给固定模板换颜色。用户需要视觉方向推荐、没有审美参考或明确要求高端界面时，再读 [references/ui-reference-sources.md](references/ui-reference-sources.md)，搜索当前可访问的实例并给出可点击链接。
 
+复杂舞台需要 Vue、动画库、PixiJS / Three.js、音频、富文本净化或大型 schema 校验时，必须读 [references/frameworks-and-effects.md](references/frameworks-and-effects.md)。新版有受限外链脚本机制，不等于任意框架 URL 已获平台白名单：原生实现是默认基线；引入大型依赖前说明收益与成本，固定精确版本，在真实目标站验证完整 URL，并保证加载失败后核心文字玩法仍可用。
+
 制作或检查对应交付物时再读其格式：字段边界见 [references/role-import.md](references/role-import.md)，世界书见 [references/worldbook-import.md](references/worldbook-import.md)，人设名称、占位符与章节结构见 [references/persona-format.md](references/persona-format.md)。界面写法先查本目录下的 [authoring](authoring/README.md)，**不要凭记忆写 SDK**。检查官方文档覆盖、遇到版本冲突或新增能力时，读取 [官方文档同步范围](references/official-doc-sync.md)，区分公开接口、定制补充与按日期记录的实测结果。仅问功能或规划时不必加载全部格式手册。宿主换肤还必须读 [references/host-theme-bridge.md](references/host-theme-bridge.md)，区分直接 CSS 与平台支持的主题桥。
 
 ## 制作流程（仅制作或修复时执行）

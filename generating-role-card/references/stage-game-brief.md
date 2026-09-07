@@ -77,7 +77,7 @@
 
 - 这不是酒馆 iframe 伪同层。调用 `sdk.stage.open('full')` 或 `sdk.stage.open('content')`，再把唯一游戏根节点挂进 `sdk.stage.el()`。
 - `full` 用于完整沉浸式游戏；`content` 用于需要保留宿主顶栏和输入框的辅助界面。它们都盖不住授权、充值等系统弹窗。
-- 主页面、内部标签页、抽屉、模态框、Canvas、WebGL / Three.js 共用一个舞台根节点和一个 UI 状态机。不要把引擎、画布或主应用挂进消息气泡。
+- 主页面、内部标签页、抽屉、模态框、Canvas、WebGL / Three.js 共用一个舞台根节点和一个 UI 状态机。不要把引擎、画布或主应用挂进消息气泡。界面状态复杂到需要框架或特效库时读 [frameworks-and-effects.md](frameworks-and-effects.md)，按其选型、外链验证和降级规则处理。
 - 初始化、渲染、事件绑定和销毁写在独立 `<script>` 规则。初始化必须幂等，重复打开舞台时复用已有根节点。
 - `ready` 负责读档并首次渲染；`message:stream` 只做轻量文本更新；`message:done` 解析最终正文、选项与状态；`conversation:switch` 重读当前会话状态；`dispose` 清理观察器、计时器和渲染循环。
 - 舞台有内部行动输入框时，玩家点击选项默认只填入该内部输入框；舞台确认按钮才调用 `sdk.message.send()`。`sdk.input.set()` 是宿主聊天输入框，只用于明确要返回聊天层编辑的界面。禁止在 `message:done` 中无条件续发。
@@ -266,7 +266,8 @@ function submitStageDraft(){
 - 完整设计主页面；所有承诺的标签页、抽屉和模态框都必须能打开、关闭并保持统一外壳
 - 暂无数据的页面使用正式中文空状态、说明和可用返回路径；不得出现 Lorem、TODO、假按钮或未接线占位块
 - 除 Logo、作品名等必要美术文字外，控件、状态、错误和帮助全部中文化
-- 默认 Vanilla CSS + 原生 JavaScript；不因视觉要求自动引入 Tailwind、React 或大型组件库
+- 默认 Vanilla CSS + 原生 JavaScript；复杂舞台可在用户知情选择或明确委托后采用 Vue 3。框架只负责组件与状态，视觉仍使用自定义 CSS；不因视觉要求自动引入 Tailwind、React、Vue Router、Pinia 或大型组件库
+- 第三方库按 [frameworks-and-effects.md](frameworks-and-effects.md) 逐项选择：固定精确版本、记录许可证与完整 HTTPS URL、真实宿主验证白名单和全局对象、提供加载失败降级；平台支持外链机制不等于所有 CDN 已通过
 - 使用带卡名前缀的唯一 ID、class、CSS 变量、存档键和函数名，避免与宿主或其他卡冲突；替换内容中的自写 `data-*` 可能被净化，优先使用 ID / class
 - 整个舞台保留一个语义主标题；各页面使用正确的二、三级标题。按钮使用真实 `button`，输入项有可见标签
 - 图标优先使用审查过的内联 SVG 或 CSS 图形，避免用 Emoji 充当主要图标；SVG 事件由外部脚本绑定，不依赖标签内 `onclick`
