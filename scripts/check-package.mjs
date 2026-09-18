@@ -16,6 +16,13 @@ const required = [
   'references/stage-game-brief.md',
   'references/frameworks-and-effects.md',
   'references/acceptance.md',
+  'references/host-theme-bridge.md',
+  'references/host-popup.md',
+  'references/host-popup-structures.md',
+  'references/host-popup-recipes.md',
+  'references/summary-panel.md',
+  'references/state-variables.md',
+  'assets/summary-popup.example.css',
 ];
 
 const normalize = (value) => String(value).replaceAll('\r\n', '\n').replace(/\n+$/, '');

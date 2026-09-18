@@ -69,7 +69,7 @@ function checkClosedChapterTags(where, text) {
     openings += 1;
   });
   if (stack.length) err(where, `章节标签未闭合：${stack.map((name) => `<${name}>`).join('、')}`);
-  if (!openings) err(where, 'content 必须至少包含一组成对章节标签');
+  if (!openings) warn(where, '当前是纯文本内容，可保留；新建内容建议使用成对章节标签');
 }
 
 function main() {
@@ -115,7 +115,8 @@ function main() {
       if (!(field in entry)) err(where, `缺少字段 ${field}`);
     });
     Object.keys(entry).forEach((field) => {
-      if (!REQUIRED.includes(field)) warn(where, `多余字段 ${field}`);
+      if (!REQUIRED.includes(field))
+        err(where, `未知扩展字段 ${field}：当前导入契约未覆盖，请先确认，不能直接删除`);
     });
     if (typeof entry.comment !== 'string' || !entry.comment.trim()) err(where, 'comment 必须是非空字符串');
     if (typeof entry.disable !== 'boolean') err(where, 'disable 必须是 boolean');
@@ -133,10 +134,16 @@ function main() {
     if (entry.constant === false && keys.length === 0) warn(where, '条件条目没有主关键词，可能永远不会触发');
     if (entry.constant === true && keys.length > 0) warn(where, '常驻条目仍配置了主关键词，请确认是否需要 constant: false');
     if (typeof entry.content !== 'string' || !entry.content.trim()) err(where, 'content 必须是非空字符串');
-    else checkClosedChapterTags(where, entry.content);
+    else {
+      if (entry.content.length > 3000) err(where, `content ${entry.content.length} 字，超过上限 3000`);
+      checkClosedChapterTags(where, entry.content);
+    }
     if (/\$#char#\$|\$#user#\$|\{\{char\}\}/.test(String(entry.content ?? ''))) {
       err(where, 'content 含旧占位符；角色写真名，玩家只用 {{user}}');
     }
+    if (Number.isInteger(entry.uid) && entry.uid < 0) err(where, 'uid 不得为负数');
+    if (Number.isInteger(entry.depth) && entry.depth < 0) err(where, 'depth 不得为负数');
+    if (Number.isInteger(entry.role) && ![0, 1, 2].includes(entry.role)) err(where, 'role 须为 0/1/2');
     if (Number.isInteger(entry.uid)) {
       if (uids.has(entry.uid)) err(where, `uid ${entry.uid} 与条目 ${uids.get(entry.uid)} 重复`);
       else uids.set(entry.uid, id);

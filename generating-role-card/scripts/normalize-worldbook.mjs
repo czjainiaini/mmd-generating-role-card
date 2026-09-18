@@ -5,7 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 function usage() {
-  console.log('用法: node normalize-worldbook.mjs --in <source.json> --out <worldbook.json> [--character <真实角色名>]');
+  console.log('用法: node normalize-worldbook.mjs --in <source.json> --out <worldbook.json> [--character <真实角色名>] [--repair-tags]');
 }
 
 function parseArgs(argv) {
@@ -13,6 +13,11 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     if (key === '--help' || key === '-h') return { help: true };
+    if (key === '--repair-tags') {
+      args.repairTags = true;
+      continue;
+    }
+    if (!['--in', '--out', '--character'].includes(key)) throw new Error(`不认识的参数 ${key}`);
     if (!key.startsWith('--')) throw new Error(`不认识的参数 ${key}`);
     const value = argv[i + 1];
     if (value === undefined || value.startsWith('--')) throw new Error(`${key} 缺值`);
@@ -23,8 +28,30 @@ function parseArgs(argv) {
 }
 
 function integer(value, fallback) {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === 'boolean' || (typeof value === 'string' && !value.trim()))
+    throw new Error('整数配置不能是空白或布尔值');
   const number = Number(value);
-  return Number.isInteger(number) ? number : fallback;
+  if (!Number.isInteger(number)) throw new Error(`无效整数配置 ${value}`);
+  return number;
+}
+
+function boolean(value, fallback) {
+  if (value === undefined || value === null) return fallback;
+  if (value === true || value === 'true') return true;
+  if (value === false || value === 'false') return false;
+  throw new Error(`开关值无法判断：${value}`);
+}
+
+const KNOWN_FIELDS = new Set(
+  'comment title name id _sourceId disable enabled constant alwaysActive always_active position role depth order priority probability key keys keywords keysecondary secondaryKeys secondary_keys content text value description uid'.split(' '),
+);
+
+function assertKnown(entry) {
+  for (const field of Object.keys(entry)) {
+    if (!KNOWN_FIELDS.has(field))
+      throw new Error(`未知扩展字段 ${field}；停止转换以免丢失配置，请先确认目标导入协议`);
+  }
 }
 
 function keyList(value) {
@@ -46,8 +73,17 @@ function keyList(value) {
 }
 
 function entriesFrom(data) {
+  if (!Array.isArray(data) && data && typeof data === 'object') {
+    const extra = Object.keys(data).filter((key) => key !== 'entries');
+    if (extra.length) throw new Error(`未知根字段 ${extra.join('、')}；停止转换以免丢失配置`);
+  }
   const source = Array.isArray(data) ? data : data?.entries;
-  if (Array.isArray(source)) return source.map((entry, index) => ({ _sourceId: index, ...entry }));
+  if (Array.isArray(source)) {
+    return source.map((entry, index) => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error(`条目 ${index} 不是对象`);
+      return { _sourceId: index, ...entry };
+    });
+  }
   if (source && typeof source === 'object') {
     return Object.entries(source).map(([id, entry]) =>
       entry && typeof entry === 'object' && !Array.isArray(entry)
@@ -148,8 +184,9 @@ function ensureClosedChapterTags(text, fallbackTitle) {
 
 function probability(value) {
   const number = Number(value ?? 100);
-  if (!Number.isFinite(number)) return '100.00';
-  return Math.max(0, Math.min(100, number)).toFixed(2);
+  if (typeof value === 'boolean' || value === '' || !Number.isFinite(number) || number < 0 || number > 100)
+    throw new Error(`无效概率 ${value}；应为 0–100`);
+  return number.toFixed(2);
 }
 
 function main() {
@@ -174,7 +211,12 @@ function main() {
   const rawEntries = entriesFrom(source);
   const usedUids = new Set();
   let nextUid = 0;
-  let skipped = 0;
+  const reservedUids = new Set(
+    rawEntries
+      .filter((entry) => entry.uid != null)
+      .map((entry) => integer(entry.uid, -1))
+      .filter((value) => value >= 0),
+  );
 
   function uidFor(entry) {
     const preferred = integer(entry.uid, -1);
@@ -183,7 +225,7 @@ function main() {
       nextUid = Math.max(nextUid, preferred + 1);
       return preferred;
     }
-    while (usedUids.has(nextUid)) nextUid += 1;
+    while (usedUids.has(nextUid) || reservedUids.has(nextUid)) nextUid += 1;
     const value = nextUid;
     usedUids.add(value);
     nextUid += 1;
@@ -192,21 +234,21 @@ function main() {
 
   const normalized = [];
   rawEntries.forEach((entry, index) => {
+    assertKnown(entry);
     const rawContent = normalizeText(entry.content ?? entry.text ?? entry.value ?? entry.description, character);
-    if (!rawContent) {
-      skipped += 1;
-      return;
-    }
+    if (!rawContent) throw new Error(`条目 ${index} 内容为空；停止转换，避免静默丢条目`);
     const keys = keyList(entry.key ?? entry.keys ?? entry.keywords);
     const secondaryKeys = keyList(entry.keysecondary ?? entry.secondaryKeys ?? entry.secondary_keys);
     const explicitConstant = entry.constant ?? entry.alwaysActive ?? entry.always_active;
-    const constant = typeof explicitConstant === 'boolean' ? explicitConstant : keys.length === 0;
+    const constant = boolean(explicitConstant, keys.length === 0);
     const comment = normalizeText(
       entry.comment ?? entry.title ?? entry.name ?? entry.id ?? entry._sourceId ?? `设定 ${index + 1}`,
       character,
     ).replace(/[\r\n]+/g, ' ');
-    const content = ensureClosedChapterTags(rawContent, comment || `设定 ${index + 1}`);
-    const disable = typeof entry.disable === 'boolean' ? entry.disable : entry.enabled === false;
+    const content = args.repairTags
+      ? ensureClosedChapterTags(rawContent, comment || `设定 ${index + 1}`)
+      : rawContent;
+    const disable = boolean(entry.disable, !boolean(entry.enabled, true));
     normalized.push({
       comment: comment || `设定 ${index + 1}`,
       disable,
@@ -216,8 +258,8 @@ function main() {
       depth: integer(entry.depth, 4),
       order: integer(entry.order ?? entry.priority, constant ? 9999 : 0),
       probability: probability(entry.probability),
-      key: JSON.stringify(constant ? [] : keys),
-      keysecondary: JSON.stringify(constant ? [] : secondaryKeys),
+      key: JSON.stringify(keys),
+      keysecondary: JSON.stringify(secondaryKeys),
       content,
       uid: uidFor(entry),
     });
@@ -227,7 +269,7 @@ function main() {
   const output = { entries: Object.fromEntries(normalized.map((entry, index) => [String(index), entry])) };
   mkdirSync(path.dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify(output, null, 2)}\n`);
-  console.log(`OK 输出 ${normalized.length} 条；跳过空条目 ${skipped} 条；根字段 entries`);
+  console.log(`OK 输出 ${normalized.length} 条；保留全部非空条目；根字段 entries`);
 }
 
 try {

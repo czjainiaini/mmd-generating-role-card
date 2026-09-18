@@ -227,11 +227,11 @@ function submitStageDraft(){
 - 可改：`--chat-*` 变量、文字颜色、背景、边框、圆角、阴影、字体、图标颜色、hover / focus / selected / streaming 状态
 - 不改：宿主 `header`、`messages/list`、`message`、`composer/toolbar` 的 `display`、`grid` / `flex` 结构、`position`、`width` / `max-width`、`margin`、`padding`、滚动容器职责
 - 不用 `min-height:100%`、人为的消息列最大宽度或底部 100px 以上补白去“模拟”平台布局
-- 隐藏页面先在真实宿主逐个打开取证，并为每个节点记录 `document` / frame URL、最近稳定根、实际计算样式和打开方式；不能只记 class。新版 `/pages/chat/host` 已实测把 `[data-chat="root"]` 放在跨源 `c<RoleId>.sbx.aitchat.org` iframe 内，却把模型设置、对话设置、新聊天和用户人设挂到父页面 `h5.aitchat.org .sandbox-host`。角色正则的 `<style>` 只在 iframe 内，无法跨源命中父页面；`.sandbox-host .model-setting-scope` 写进角色包仍是零效果
+- 隐藏页面先在真实宿主逐个打开取证，并为每个节点记录 `document` / frame URL、最近稳定根、实际计算样式和打开方式；不能只记 class。聊天 iframe 的普通 `<style>` 不能跨源直接命中父页面，裸 `.sandbox-host .model-setting-scope` 仍是零效果。2026-09-18 官方 ZIP 另记录平台过滤并注入从 `[data-host="…"]` 开始的受控宿主 CSS；它不是跨源 DOM 权限，且本轮资料同步不把 ZIP 说明当作当前目标站已经注入的证据。根、过滤和验收见 [宿主弹窗探针](host-popup.md)
 - 输入控件验收要沿父链查到实际背景、边框和阴影承载节点；新版聊天输入白底位于 `[data-chat="input"]` 的直接父容器，而非 textarea 本体。父页面的 `.model-setting-scope`（模型设置）与 `.model-switch-scope`（对话模型选择）必须作为两个独立隐藏页面取证和验收
-- 新版角色包直接覆盖 iframe 内层；受支持父页面弹窗通过官方主题桥同步颜色。2026-09-04 新站已开放 18 个扩展变量，完整列表、逐入口记录和诊断方法见 [host-theme-bridge.md](host-theme-bridge.md)，宿主换肤时必须读取并在目标站复核。没有接入主题桥的组件单列限制，不能因为 CSS 跨源就推断所有弹窗都不支持，也不能猜测私有消息协议绕过边界。
+- 新版角色包直接覆盖 iframe 内层；受支持父页面弹窗可以经官方主题桥同步颜色，或在用户明确要求细改且当前目标已取证时走 `[data-host="…"]` 的过滤注入通路。2026-09-04 起记录的 18 个扩展变量、逐入口历史和诊断方法见 [host-theme-bridge.md](host-theme-bridge.md)；受控根与结构见 [宿主弹窗探针](host-popup.md)。没有接入任一通路的组件单列限制，不能因为 CSS 跨源就推断所有弹窗都不支持，也不能猜测私有消息协议绕过边界。
 - 用户要求公开分发时，正式角色规则与官方主题入口是交付路径；不依赖 userstyle / Stylus、本地服务或开发者工具临时改样式。卡内聊天层、隐藏面板、sdk.stage 和受支持父层颜色共享主题令牌；未接入的组件保留原生并明确注明。
-- 旧版同文档聊天或已有合法父层注入入口时，再以真实 `.sandbox-host` / `uni-page-body > .chat` 根叠加 `.model-setting-scope`、`.conv-style-modal`、`.conversation-list-scope`、`.role-profile-modal`、`.custom-instruction-scope`、`.summary-sheet`、`.role-extra-setting` 等功能作用域。此类 class 属于兼容层，不是永久 API；不得使用哈希 class、无根全局选择器，也不得接管授权、支付等系统弹窗
+- 旧版同文档的容器类别只能作为迁移输入，不能把 `.sandbox-host`、`uni-page-body > .chat` 或旧内部 class 直接带到新版角色规则。新版公开交付只使用 iframe 的 `data-chat` / `data-slot`、官方主题桥，或从 `[data-host="…"]` 开始的受控根；不得使用哈希 class、无根全局选择器，也不得接管授权、支付等系统弹窗。
 - 若用户明确要求重排，先记录原布局截图 / 关键尺寸，改后逐项比较顶栏、消息宽度、消息操作、工具栏、输入框与发送按钮
 
 ## 视觉方向与参考选择

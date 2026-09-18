@@ -58,7 +58,7 @@ presentation.transforms
 node scripts/normalize-worldbook.mjs \
   --in path/to/worldbook.json \
   --out docs/card/generated/xxx-worldbook.json \
-  --character 真实角色名 \
+  --character 真实角色名
 node scripts/validate-worldbook.mjs docs/card/generated/xxx-worldbook.json
 ```
 
@@ -78,3 +78,28 @@ var userName = user && user.nickname ? user.nickname : '玩家';
 ```
 
 角色设定本身仍来自 `personality`，不是 SDK。
+
+## 字段上限与公开检查
+
+| 字段 | 上限 |
+| --- | --- |
+| 角色名称 | 20 字 |
+| `personality` | 10000 字 |
+| `beginning` | 4000 字 |
+| `statusbar` | 200 字 |
+| 单条世界书 `content` | 3000 字 |
+| 规则数 | 130 条 |
+| 规则名 / 匹配式 / 替换内容 | 20 / 1000 / 20000 字 |
+
+`replaceString` 的 20000 是编辑器安全上限；即使某个导入入口暂时接受更长内容，也应拆分以免下次编辑被截断。
+
+需要按公开卡的当前静态规则自检时，使用实际文件路径运行：
+
+```bash
+node scripts/validate.mjs /absolute/path/to/card-regex.json \
+  --persona /absolute/path/to/card-persona.txt \
+  --worldbook /absolute/path/to/card-worldbook.json \
+  --publish
+```
+
+`--publish` 会核对第一句话至少 200 字，以及“人设 + 已启用、常驻、100% 概率世界书内容”的固定传输字符在 2000–15000 之间。它是本 Skill 的作者静态检查，不代替平台审核；只做私测草稿时不必为了通过该阈值填充内容。

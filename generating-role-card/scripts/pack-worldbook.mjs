@@ -5,7 +5,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 function usage() {
-  console.log('用法: node pack-worldbook.mjs --persona <persona.txt> --worldbook <worldbook.json> --out <packed.txt> [--character <角色名>] [--limit 9500]');
+  console.log('用法: node pack-worldbook.mjs --persona <persona.txt> --worldbook <worldbook.json> --out <packed.txt> [--character <角色名>] [--limit 9500] [--allow-partial]');
 }
 
 function parseArgs(argv) {
@@ -13,6 +13,12 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     if (key === '--help' || key === '-h') return { help: true };
+    if (key === '--allow-partial') {
+      args.allowPartial = true;
+      continue;
+    }
+    if (!['--persona', '--worldbook', '--out', '--character', '--limit'].includes(key))
+      throw new Error(`不认识的参数 ${key}`);
     if (!key.startsWith('--')) throw new Error(`不认识的参数 ${key}`);
     const value = argv[i + 1];
     if (value === undefined || value.startsWith('--')) throw new Error(`${key} 缺值`);
@@ -151,7 +157,7 @@ function normalizePersona(raw, explicitCharacter) {
   const character = compact(explicitCharacter || taggedCharacter);
 
   persona = persona.replaceAll('$#user#$', '{{user}}');
-  if (character) persona = persona.replaceAll('$#char#$', character);
+  if (character) persona = persona.replaceAll('$#char#$', character).replaceAll('{{char}}', character);
   if (/\$#char#\$/.test(persona)) {
     throw new Error('原人设仍含 $#char#$，请传入 --character <真实角色名>');
   }
@@ -169,7 +175,7 @@ function normalizePersona(raw, explicitCharacter) {
 function normalizeContent(content, character) {
   let normalized = compact(content).replace(/^【([^】\r\n]+)】$/gm, '<$1>');
   normalized = normalized.replaceAll('$#user#$', '{{user}}');
-  if (character) normalized = normalized.replaceAll('$#char#$', character);
+  if (character) normalized = normalized.replaceAll('$#char#$', character).replaceAll('{{char}}', character);
   if (/\$#char#\$|\$#user#\$|\{\{char\}\}/.test(normalized)) {
     throw new Error('世界书条目含无法转换的旧占位符');
   }
@@ -203,6 +209,36 @@ function main() {
   const character = normalizedPersona.character;
   const worldbook = JSON.parse(readFileSync(worldbookPath, 'utf8'));
 
+  if (
+    !worldbook ||
+    typeof worldbook !== 'object' ||
+    Array.isArray(worldbook) ||
+    Object.keys(worldbook).some((key) => key !== 'entries')
+  ) {
+    throw new Error('请先规范化为根节点仅有 entries 的独立世界书');
+  }
+  const allowedFields = new Set(
+    'comment disable constant position role depth order probability key keysecondary content uid'.split(' '),
+  );
+  for (const entry of entryArray(worldbook)) {
+    for (const key of Object.keys(entry)) {
+      if (key !== 'id' && !allowedFields.has(key))
+        throw new Error(`未知扩展字段 ${key}；不能丢弃其条件后压入人设`);
+    }
+    if (
+      typeof entry.disable !== 'boolean' ||
+      typeof entry.constant !== 'boolean' ||
+      typeof entry.probability !== 'string' ||
+      !/^\d+\.\d{2}$/.test(entry.probability) ||
+      Number(entry.probability) < 0 ||
+      Number(entry.probability) > 100 ||
+      typeof entry.content !== 'string' ||
+      !entry.content.trim()
+    ) {
+      throw new Error('请先规范化并校验世界书，不能猜测开关、概率或空内容');
+    }
+  }
+
   if (persona.length > limit) throw new Error(`原人设 ${persona.length} 字，已经超过目标上限 ${limit}`);
 
   const normalizedEntries = entryArray(worldbook)
@@ -213,14 +249,19 @@ function main() {
       return { ...entry, title, content };
     })
     .filter((entry) => entry.content);
-  const disabledEntries = normalizedEntries.filter((entry) => entry.disabled);
+  const disabledEntries = normalizedEntries.filter((entry) => entry.disabled || entry.probability === 0);
   const entries = normalizedEntries
-    .filter((entry) => !entry.disabled)
+    .filter((entry) => !entry.disabled && entry.probability > 0)
     .sort((a, b) => Number(b.constant) - Number(a.constant) || b.priority - a.priority || a.index - b.index);
 
   const seen = new Set();
   const selected = [];
-  const skipped = disabledEntries.map((entry) => `${entry.title}（停用）`);
+  const skipped = disabledEntries.map((entry) => `${entry.title}（停用或零概率）`);
+  const omitted = [];
+  if (!/^<角色设定\s+名字[：:]\s*[^>\r\n]+>\n[\s\S]*\n<\/角色设定>$/.test(persona))
+    throw new Error('请先将完整人设整理成一个角色主标签根节点');
+  const personaPrefix = persona.slice(0, -'</角色设定>'.length).trimEnd();
+  const personaClose = '\n</角色设定>';
   const blocks = [];
   const headingOpen = '\n\n<补充世界设定>\n';
   const headingClose = '\n</补充世界设定>';
@@ -231,45 +272,48 @@ function main() {
     const content = entry.content.startsWith(`${ownHeading}\n`) && entry.content.endsWith(`\n${ownClosing}`)
       ? entry.content.slice(ownHeading.length + 1, -ownClosing.length - 1).trim()
       : entry.content;
-    const signature = content.replace(/\s+/g, '');
-    if (seen.has(signature) || persona.replace(/\s+/g, '').includes(signature)) {
+    const signature = JSON.stringify([
+      content.replace(/\s+/g, ''),
+      entry.constant,
+      entry.keys,
+      entry.secondaryKeys,
+      entry.probability,
+    ]);
+    if (seen.has(signature)) {
       skipped.push(entry.title);
       continue;
     }
     seen.add(signature);
-    const triggerWords = [...new Set(entry.keys.concat(entry.secondaryKeys))];
+    const primary = entry.keys.length ? `主要关键词任意一个（${entry.keys.join('、')}）` : '';
+    const secondary = entry.secondaryKeys.length ? `次要关键词组（${entry.secondaryKeys.join('、')}）` : '';
     const triggerNote = entry.constant
       ? ''
-      : triggerWords.length
-        ? `- 触发条件：仅在近期对话出现「${triggerWords.join('、')}」时参考本节。\n`
-        : '- 触发条件：原条目为非常驻且无关键词，只在用户明确提及时参考本节。\n';
-    const probabilityNote = !entry.constant && entry.probability < 100
-      ? `- 原触发概率：${entry.probability.toFixed(2)}%，不要每轮强制应用。\n`
+      : primary
+        ? `- 触发条件：近期对话满足${primary}${secondary ? `，并且同时满足${secondary}` : ''}时参考本节。\n`
+        : '- 触发条件：原条目为非常驻且无主关键词，原触发行为不可等价保留，只在用户明确提及时参考。\n';
+    const probabilityNote = entry.probability < 100
+      ? `- 原触发概率：${entry.probability.toFixed(2)}%；文字说明不能执行平台概率采样，不应视为每轮必然生效。\n`
       : '';
     const body = `${triggerNote}${probabilityNote}${content}`.trim();
     const blockOpen = `<${entry.title}>\n`;
     const blockClose = `\n</${openingTagName(entry.title)}>`;
     const block = `${blockOpen}${body}${blockClose}`;
     const separatorLength = blocks.length ? 2 : 0;
-    const used = persona.length + headingOpen.length + headingClose.length + blocks.join('\n\n').length;
+    const used = personaPrefix.length + personaClose.length + headingOpen.length + headingClose.length + blocks.join('\n\n').length;
     if (used + separatorLength + block.length <= limit) {
       blocks.push(block);
       selected.push(entry.title);
       continue;
     }
 
-    const remaining = limit - used - separatorLength - blockOpen.length - blockClose.length;
-    const bodyHasChapterTags = /^\s*<\/?[^<>]+>\s*$/m.test(body);
-    if (remaining >= 160 && !bodyHasChapterTags) {
-      blocks.push(`${blockOpen}${body.slice(0, remaining - 1).trimEnd()}…${blockClose}`);
-      selected.push(`${entry.title}（截短）`);
-    } else {
-      skipped.push(entry.title);
-    }
+    omitted.push(entry.title);
+    skipped.push(`${entry.title}（超出长度）`);
   }
 
+  if (omitted.length && !args.allowPartial)
+    throw new Error(`长度不足，以下条目未合并：${omitted.join('、')}。先做语义压缩；明确允许部分合并时才加 --allow-partial`);
   if (!selected.length) throw new Error('没有可合并的世界设定条目');
-  const output = `${persona}${headingOpen}${blocks.join('\n\n')}${headingClose}`;
+  const output = `${personaPrefix}${headingOpen}${blocks.join('\n\n')}${headingClose}${personaClose}`;
   if (!/{{user}}/.test(output)) console.warn('WARN 合并后人设没有 {{user}}，请确认设定是否需要指代玩家');
   if (/\$#char#\$|\$#user#\$|\{\{char\}\}/.test(output)) {
     throw new Error('合并结果含旧占位符');
@@ -278,6 +322,7 @@ function main() {
 
   mkdirSync(path.dirname(outPath), { recursive: true });
   writeFileSync(outPath, `${output}\n`);
+  console.warn('WARN 压入人设仅保留文字设定，不能等价保留平台触发、概率和插入机制');
   console.log(`OK ${output.length}/${limit} 字；角色 ${character}；合并 ${selected.length} 条；跳过 ${skipped.length} 条`);
   console.log(`INCLUDED ${selected.join(' | ')}`);
   if (skipped.length) console.log(`SKIPPED ${skipped.join(' | ')}`);

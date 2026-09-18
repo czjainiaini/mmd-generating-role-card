@@ -4,7 +4,7 @@
 
 ## 角色人设
 
-创卡页字段是 `personality`，上限 10000 字。公开卡审核文案要求 2000–5000；自己测可以短。**不要**套用创卡页占位那段恋爱文案。
+创卡页字段是 `personality`，上限 10000 字。公开发布时检查的是“人设 + 已启用、常驻、100% 概率世界书内容”的固定传输字符 2000–15000，以及至少 200 字的第一句话；私测草稿可以短。**不要**套用创卡页占位那段恋爱文案。
 
 人设喂给模型，不是页面 HTML。里面不要写 `<style>` / `<script>` / `sdk.*`。
 
@@ -18,7 +18,7 @@
 4. `<背景设定>` 与 `<行为逻辑>`：经历、动机、决策顺序和不能崩的人设底线
 5. `<道具>`、`<能力与限制>`：只写会影响剧情的物件和真实限制
 6. `<当前情景>`：这一刻在哪、刚发生什么（和 `beginning` 同方向，但人设写设定，开场白写第一句戏）
-7. `<输出格式>`（有界面需求时必写）：模型必须打出正则能吃到的字。血条 → `血量：数字`；状态块 → `[status]…[/status]`；骰子 → `〖骰=…〗`。标记表见 [kits/rpg.md](kits/rpg.md)。约定写不出，规则等于没写。
+7. `<输出格式>`（**仅在界面依赖模型生成标记时**加入）：模型必须打出正则能吃到的字。血条 → `血量：数字`；状态块 → `[status]…[/status]`；骰子 → `〖骰=…〗`。标记表见 [kits/rpg.md](kits/rpg.md)。纯换肤、宿主弹窗换肤、或“选项填入输入框”的按钮不需要凭空加这段协议；约定一旦使用就必须逐字和解析器一致。
 
 `beginning` 是玩家看见的第一句话，直接写真实角色名，玩家写 `{{user}}`，可以夹触发串 `{{intro}}`。不要把整篇人设贴进开场白。
 
@@ -45,7 +45,7 @@ node scripts/normalize-worldbook.mjs --in source.json --out xxx-worldbook.json -
 node scripts/validate-worldbook.mjs xxx-worldbook.json
 ```
 
-若用户从零创建世界书，也先写通用 entries / 数组草稿，再通过标准化脚本输出，避免手工写错 `key` 的双重 JSON 编码。最终交付规范化后的 `*-worldbook.json`，原文件仅作为来源备份。
+若用户从零创建世界书，也先写通用 entries / 数组草稿，再通过标准化脚本输出，避免手工写错 `key` 的双重 JSON 编码。默认只修字段形状、类型与明确旧占位符；未知根 / 条目字段会停止并报告，不能静默丢掉。用户明确要求修复简单缺闭合标签时才加 `--repair-tags`；复杂交叉嵌套必须逐段处理。最终交付规范化后的 `*-worldbook.json`，原文件仅作为来源备份。
 
 只有用户明确要求压入人设，或目标入口确实不支持独立世界书时才用：
 
@@ -53,7 +53,17 @@ node scripts/validate-worldbook.mjs xxx-worldbook.json
 node scripts/pack-worldbook.mjs --persona xxx-persona.txt --worldbook xxx-worldbook.json --character 角色名 --out xxx-persona-packed.txt
 ```
 
-打包会跳过 `disable: true` 的条目，并把关键词触发条件写进标签正文，避免把条件条目误当成无条件常驻规则。公开卡合并后人设优先 2000–5000 字，且必须 ≤ 10000 字。
+打包会跳过 `disable: true` 的条目，并把关键词触发条件写进标签正文，避免把条件条目误当成无条件常驻规则。默认一旦超限或有条目无法完整合并就报错；只有用户明确接受部分合并时才加 `--allow-partial`，并在交付中列出遗漏条目。最终人设必须 ≤ 10000 字；要公开发布时，用 `validate.mjs --publish --worldbook` 核对固定传输字符 2000–15000，而不是拿旧的单独人设区间凑字数。
+
+## 状态变量、作者存档与缓存
+
+血量、好感、背包、任务、地图或状态条件世界书先读 [references/state-variables.md](references/state-variables.md)，不要因为页面上需要显示数值就把三种数据源混成一份：
+
+- 平台状态变量：只在目标站当前状态结构和 SDK 契约都已取证时采用；当前不生成依赖 `sdk.vars` 的代码。
+- `sdk.save`：作者私有、需要持久化的小游戏进度和多手动槽；不会自动进入模型上下文。
+- `sdk.cache`：会话内、刷新即失的展示状态。
+
+一个剧情数值只选一个真值来源。需要模型知晓私有读档结果时，走舞台内“确认发送”的续档上下文，而不是从前端覆盖平台状态或历史消息。
 
 ## 换肤 / 配色
 
@@ -63,8 +73,10 @@ node scripts/pack-worldbook.mjs --persona xxx-persona.txt --worldbook xxx-worldb
 | 只改 AI 气泡 / 只改用户气泡 | `[data-chat="message"][data-from="ai"] [data-chat="message-body"]` 上改 `--chat-bubble-*` | [03-dom.md](authoring/03-dom.md) 「改某一块：直接抄」 |
 | 改顶栏 / 输入框字号 | `[data-chat="header"]`、`[data-chat="input"]` | 同上 |
 | 藏掉底部输入区 | `[data-chat="composer"]{display:none}`，但要另给一条发消息的路（`composer.hide` + 自己的发送按钮） | [01-style.md](authoring/01-style.md) 「藏掉底部输入区」 |
+| 改模型、设置、新聊天、用户人设等宿主弹窗 | 从精确 `[data-host="…"]` 根开始写扁平 CSS；先打开目标面板取证 | [host-popup.md](references/host-popup.md) |
+| 改剧情总结 / 记忆管理 | `summary` 根本身就是 `.summary-sheet`；主面板、编辑层、锚点层分开验收 | [summary-panel.md](references/summary-panel.md) |
 
-基础变量：`--chat-bg` `--chat-surface` `--chat-text` `--chat-text-muted` `--chat-border` `--chat-accent` `--chat-bubble-user-bg` `--chat-bubble-ai-bg` `--chat-bubble-text` `--chat-viewport-height`。新版底栏、输入与父页面弹窗还要读 [references/host-theme-bridge.md](references/host-theme-bridge.md)，不能把这份基础列表当成全部能力。
+基础变量：`--chat-bg` `--chat-surface` `--chat-text` `--chat-text-muted` `--chat-border` `--chat-accent` `--chat-bubble-user-bg` `--chat-bubble-ai-bg` `--chat-bubble-text` `--chat-viewport-height`。新版底栏、输入与父页面弹窗还要读 [references/host-theme-bridge.md](references/host-theme-bridge.md)：基础统一配色可用 18 个主题变量，已开放弹窗可进一步使用受过滤的 `[data-host]` CSS；不得写裸父页面 class、`window.parent.document`、`:has()` 或 `url(`。
 
 ## 功能栏 / HUD
 
@@ -164,7 +176,7 @@ replaceString:  <div class="my-bar" style="width:$1%;height:8px;border-radius:4p
 - 所有主页面、标签页、模态框、Canvas、WebGL / Three.js 都在一次性脚本初始化后挂到 `sdk.stage.el()` 的单一根节点
 - 玩家需求已经明确就直接实现；用户想选择时才给精简设计表；用户表示不确定或让 AI 决定时，由 AI 自动补齐风格、配色、模块与交互，不强制问卷
 - 酒馆材料只能迁移页面流程、状态机、输出协议和验收思路；`iframe`、伪楼层、Tavern Helper API、MVU / `getvar`、浏览器全屏 API 不得照搬
-- UI 读 `message:stream` / `message:done` 的原文，进度用一个版本化 `sdk.save` 对象；不要从气泡 DOM 反向抓正文
+- UI 读 `message:stream` / `message:done` 的原文，进度用一个版本化 `sdk.save` 对象；不要从气泡 DOM 反向抓正文。若玩家同时要平台状态变量，先按 [state-variables.md](references/state-variables.md) 选定单一真值来源
 - 多章节、分支调查、RPG 或经营类长线游戏默认用“自动档 + 可命名手动槽”，将槽位数组和快照打包进一个 `sdk.save` 对象；每槽显示时间与摘要，支持定点读取、覆盖和二次确认删除，不得只做“保存最新 / 读取最新”
 - 输出协议只保留一套权威格式，正文模板与 CoT 模板冲突时先合并；禁止要求模型把 `<thinking>` 暴露给玩家
 
