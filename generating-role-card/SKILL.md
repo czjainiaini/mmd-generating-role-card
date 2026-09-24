@@ -158,9 +158,9 @@ input:change  conversation:switch  theme:change  back  stage:close  dispose
 - 长期存在的画布 / 面板挂舞台（`sdk.stage.el()`），别挂气泡里——气泡滚出屏幕就销毁
 - **WebGL / Three.js 必须走舞台**：先调用 `sdk.stage.open('content'|'full')`，再把 renderer 的 `canvas` 或引擎根节点挂到 `sdk.stage.el()` 返回的容器；初始化、渲染循环和销毁逻辑写在独立的 `<script>` 规则中，禁止把 WebGL / Three.js 主代码或画布写进、挂进消息气泡
 - 完整舞台如果已有自己的行动输入框，选项按钮默认只把文字写入**舞台内部输入框**并聚焦，保持舞台打开，让玩家修改后再点舞台内确认按钮；确认按钮才在该次用户点击中调用 `sdk.message.send()`。只有无内部输入框、且产品明确要回到聊天层继续编辑时，才用 `sdk.input.set()` 写入宿主输入框。若提供“一点即发”，必须由用户明确选择，并把 `stageDraft` / `direct` 写进版本化存档的 `settings.choiceBehavior`，默认固定为 `stageDraft`
-- 进度存 `save`，临时 UI 态才用 `cache`；`save` 有限频，攒起来写。平台状态变量、`save` 与 `cache` 的真值分工见 [references/state-variables.md](references/state-variables.md)；`sdk.vars` / `vars:change` 尚无公开可执行契约，不能据此编造运行时代码或导入字段
+- 进度存 `save`，临时 UI 态才用 `cache`；`save` 有限频，低优先级变化可合并写，关键回合和玩家确认的存档不可延后到防抖窗口。平台状态变量、`save` 与 `cache` 的真值分工见 [references/state-variables.md](references/state-variables.md)；`sdk.vars` / `vars:change` 尚无公开可执行契约，不能据此编造运行时代码或导入字段
 - 标签只负责传输正文、选项和状态补丁；`cache` 不等于变量存档。模型输出的变量路径、类型和范围必须经过前端白名单校验，失败时保留上一份有效状态，禁止把模型返回的任意对象直接覆盖运行时状态
-- 地图型角色卡默认接持久化：玩家地图/坐标、NPC 地图/坐标/相遇与剧情状态、资源节点、背包、任务和关系值合并成一个版本化对象；`ready` 用 `save.get` 初始化，`conversation:switch` 重新读取，移动与小游戏结算后防抖 `save.set`，失败只记调试日志且不能阻断游玩
+- 地图型角色卡默认接持久化：玩家地图/坐标、NPC 地图/坐标/相遇与剧情状态、资源节点、背包、任务和关系值合并成一个版本化对象；`ready` 用 `save.get` 初始化，`conversation:switch` 重新读取。低优先级偏好可防抖保存，有效回合 / 小游戏结算与玩家确认的手动档应立即发起写入；同键写入串行，失败要给出可见状态和重试入口，但不能阻断游玩
 - 多章节、分支调查、RPG、经营或其他需要反复回退的长线游戏，不得只提供“覆盖最新进度 / 读取最新进度”。默认保留一个自动存档和若干可命名的手动槽，显示名称、更新时间和摘要，支持定点读取、覆盖与二次确认删除；优先把槽位索引和快照打包进一个版本化 `sdk.save` 对象，避免占满平台最多 10 个存档名。短篇一次性玩法或用户明确不要时可省略手动槽
 - MMD 存档只能恢复游戏快照，不能删除或分叉宿主聊天历史。长线读档要把经过白名单裁剪的状态、任务、已知线索、人物和最近纪事组成一次性续档上下文，在下一次舞台“确认发送”时随行动交给模型；界面明确提示“旧消息仍在”，发送成功发起后消费、失败则恢复。详细协议与验收见 [references/stage-game-brief.md](references/stage-game-brief.md) 和 [references/acceptance.md](references/acceptance.md)
 - 宿主全局美化默认只改主题变量、颜色、字体、边框、阴影和交互状态；不得覆盖 `[data-chat="header"]`、`list`、`message`、`composer`、`toolbar` 的 `display`、网格、定位、宽度、外边距或内边距。用户明确要求重排宿主页时才允许改布局，并必须单独做桌面和手机回归验收
